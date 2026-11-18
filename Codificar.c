@@ -4,14 +4,14 @@
 
 union byte
 {
-    unsigned char b0:1;
-    unsigned char b1:1;
-    unsigned char b2:1;
-    unsigned char b3:1;
-    unsigned char b4:1;
-    unsigned char b5:1;
-    unsigned char b6:1;
-    unsigned char b7:1;
+    unsigned char b0 : 1;
+    unsigned char b1 : 1;
+    unsigned char b2 : 1;
+    unsigned char b3 : 1;
+    unsigned char b4 : 1;
+    unsigned char b5 : 1;
+    unsigned char b6 : 1;
+    unsigned char b7 : 1;
 };
 
 struct lista
@@ -24,11 +24,31 @@ struct lista
 };
 typedef struct lista Lista;
 
-void lerArquivo(Lista ** lista);
-void CriaNoLista(Lista ** novo, int simbolo, char palavra[30]);
-Lista *buscarPalavra(Lista * lista, char palavra[30]);
-void inserirOrdenado(Lista ** lista, Lista *novo);
+struct folha
+{
+    int freq, simbolo;
+};
+
+union no
+{
+    int freqTotal;
+    struct folha folha;
+};
+
+struct arvh
+{
+    struct arvh *esq, *dir;
+    union no no;
+};
+typedef struct arvh Arvh;
+
+void lerArquivo(Lista **lista);
+void criaNoLista(Lista **novo, int simbolo, char palavra[30]);
+Lista *buscarPalavra(Lista *lista, char palavra[30]);
+void inserirOrdenado(Lista **lista, Lista *novo);
 void exibirLista(Lista *lista);
+Lista *menores(Lista *lista, Lista **menor, Lista **segMenor);
+void criarArvoreH(Arvh **arvh, Lista *lista);
 
 void lerArquivo(Lista **lista)
 {
@@ -73,7 +93,7 @@ void lerArquivo(Lista **lista)
                 }
                 else
                 {
-                    CriaNoLista(&novo, simbolo, palavra);
+                    criaNoLista(&novo, simbolo, palavra);
 
                     if (novo != NULL)
                     {
@@ -94,7 +114,8 @@ void lerArquivo(Lista **lista)
     }
 }
 
-void inserirOrdenado(Lista ** lista, Lista *novo)
+// Ordem Crescente
+void inserirOrdenado(Lista **lista, Lista *novo)
 {
     Lista *aux;
     if (*lista == NULL)
@@ -114,11 +135,30 @@ void inserirOrdenado(Lista ** lista, Lista *novo)
 
             while (aux->prox != NULL && novo->freq >= aux->prox->freq)
                 aux = aux->prox;
-            
+
             novo->prox = aux->prox;
-            aux->prox = novo; 
+            aux->prox = novo;
         }
     }
+}
+
+// Como a lista em ordem crescente, os dois menores sempre serão os dois primeiros
+Lista *menores(Lista *lista, Lista **menor, Lista **segMenor)
+{
+    *menor = *segMenor = NULL;
+
+    if (lista != NULL && lista->prox != NULL)
+    {
+        *menor = lista;
+        *segMenor = lista->prox;
+
+        lista = lista->prox->prox;
+
+        (*menor)->prox = NULL;
+        (*segMenor)->prox = NULL;
+    }
+
+    return lista;
 }
 
 void exibirLista(Lista *lista)
@@ -133,9 +173,9 @@ void exibirLista(Lista *lista)
     }
 }
 
-void CriaNoLista(Lista ** novo, int simbolo, char palavra[30])
+void criaNoLista(Lista **novo, int simbolo, char palavra[30])
 {
-    *novo = (Lista*)malloc(sizeof(Lista));
+    *novo = (Lista *)malloc(sizeof(Lista));
 
     (*novo)->simbolo = simbolo;
     strcpy((*novo)->palavra, palavra);
@@ -143,14 +183,14 @@ void CriaNoLista(Lista ** novo, int simbolo, char palavra[30])
     (*novo)->prox = NULL;
 }
 
-Lista *buscarPalavra(Lista * lista, char palavra[30])
+Lista *buscarPalavra(Lista *lista, char palavra[30])
 {
     while (lista != NULL)
     {
-        if (strcmp(lista->palavra, palavra) == 0) 
+        if (strcmp(lista->palavra, palavra) == 0)
         {
             return lista;
-        }    
+        }
 
         lista = lista->prox;
     }
@@ -158,11 +198,82 @@ Lista *buscarPalavra(Lista * lista, char palavra[30])
     return NULL;
 }
 
+void criarArvoreH(Arvh ** raiz, Lista *lista)
+{
+    Lista *menor, *segMenor;
+    Arvh *novoMenor, *novoSegMenor, *arvore;
+    while (lista != NULL)
+    {
+        lista = menores(lista, &menor, &segMenor);
+
+        if (menor != NULL && segMenor != NULL)
+        {
+            criaNoArvoreFolha(&novoMenor, menor);
+            criaNoArvoreFolha(&novoSegMenor, segMenor);
+        }
+        else
+        {
+
+        }
+        
+        criaNoArvore(&arvore, novoMenor, novoSegMenor);
+
+        insereArvoreH(&*raiz, arvore);
+
+        lista = lista->prox;
+    }
+}
+
+void insereArvoreH(Arvh ** raiz, Arvh *subArvore)
+{
+    if (*raiz == NULL)
+    {
+        (*raiz)->dir = subArvore;
+    }
+    else
+    {
+        
+    }
+}
+
+void criaNoArvoreFolha(Arvh **arvh, Lista *lista)
+{
+    *arvh = (Arvh *)malloc(sizeof(Arvh));
+
+    (*arvh)->dir = (*arvh)->esq = NULL;
+
+    (*arvh)->no.folha.freq = lista->freq;
+    (*arvh)->no.folha.simbolo = lista->simbolo;
+}
+
+void criaNoArvore(Arvh **arvh, Arvh *menor, Arvh *segMenor)
+{
+    (*arvh)->esq = menor;
+    (*arvh)->dir = segMenor;
+
+    (*arvh)->no.freqTotal = menor->no.folha.freq + segMenor->no.folha.freq;
+}
+
+Arvh *init()
+{
+    Arvh *arvh = (Arvh *)malloc(sizeof(Arvh));
+
+    arvh->dir = arvh->esq = NULL;
+
+    return arvh;
+}
+
 int main()
 {
-    Lista * lista = NULL;
+    Lista *lista = NULL;
+    Arvh *arvh = init();
+
     printf("Codificacao\n");
+
     lerArquivo(&lista);
     exibirLista(lista);
+
+    criarArvoreH(&arvh, lista);
+
     return 0;
 }
